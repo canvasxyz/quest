@@ -21,6 +21,7 @@ import { useFipDisplayOptions } from "./useFipDisplayOptions"
 import { DatePicker, DateRange } from "./date_picker"
 import { FipVersion } from "../../../util/types"
 import { getAuthorKey, splitAuthors, UserInfo } from "./splitAuthors"
+import { IsVisibleObserver } from "../../../components/IsVisibleObserver"
 
 function cleanFipType(originalFipType: string) {
   let fip_type = ""
@@ -167,6 +168,9 @@ const FipTracker = () => {
 
   const searchParam = searchParams.get("search") || ""
 
+  const [scrollCursor, setScrollCursor] = useState(0)
+  const scrollPageSize = 10
+
   const { data } = useSWR(
     `fips`,
     async () => {
@@ -273,6 +277,7 @@ const FipTracker = () => {
       return true
     })
     .toSorted(sortFunction)
+    .slice(0, scrollCursor + scrollPageSize)
 
   return (
     <Flex
@@ -290,7 +295,10 @@ const FipTracker = () => {
           <TextField.Root
             placeholder="Search..."
             value={(searchParams as any).get("search") || ""}
-            onChange={(e) => setSearchParams({ search: e.target.value })}
+            onChange={(e) => {
+              setScrollCursor(0)
+              setSearchParams({ search: e.target.value })
+            }}
           >
             <TextField.Slot>
               <TbSearch style={{ color: "#B4B6C2" }} />
@@ -318,6 +326,7 @@ const FipTracker = () => {
                     !unlabeledAuthorDeselected
                   }
                   setChecked={(value) => {
+                    setScrollCursor(0)
                     setDeselectedFipAuthors(() =>
                       Object.fromEntries(
                         Object.keys(allFipAuthors || {}).map((key) => [key, !value]),
@@ -336,6 +345,7 @@ const FipTracker = () => {
                   }}
                   showOnly={true}
                   selectOnly={() => {
+                    setScrollCursor(0)
                     setDeselectedFipAuthors(() =>
                       Object.fromEntries(
                         Object.keys(allFipAuthors || {}).map((key) => [key, true]),
@@ -355,10 +365,12 @@ const FipTracker = () => {
                       color={"blue"}
                       checked={deselectedFipAuthors[fipAuthor] !== true}
                       setChecked={(value) => {
+                        setScrollCursor(0)
                         setDeselectedFipAuthors((prev) => ({ ...prev, [fipAuthor]: !value }))
                       }}
                       showOnly={true}
                       selectOnly={() => {
+                        setScrollCursor(0)
                         setDeselectedFipAuthors(() =>
                           Object.fromEntries(
                             Object.keys(allFipAuthors || {}).map((key) => [key, key !== fipAuthor]),
@@ -382,6 +394,7 @@ const FipTracker = () => {
                   color={"blue"}
                   checked={Object.values(selectedFipStatuses).every((value) => value === true)}
                   setChecked={(value) => {
+                    setScrollCursor(0)
                     setSelectedFipStatuses(() =>
                       Object.fromEntries(allFipStatuses.map((key) => [key, value])),
                     )
@@ -396,10 +409,12 @@ const FipTracker = () => {
                     color={statusOptions[fipStatus].color}
                     checked={selectedFipStatuses[fipStatus]}
                     setChecked={(value) => {
+                      setScrollCursor(0)
                       setSelectedFipStatuses((prev) => ({ ...prev, [fipStatus]: value }))
                     }}
                     showOnly={true}
                     selectOnly={() => {
+                      setScrollCursor(0)
                       setSelectedFipStatuses(() =>
                         Object.fromEntries(allFipStatuses.map((key) => [key, key === fipStatus])),
                       )
@@ -430,6 +445,7 @@ const FipTracker = () => {
                   color={"blue"}
                   checked={Object.values(deselectedFipTypes).every((value) => value !== true)}
                   setChecked={(value) => {
+                    setScrollCursor(0)
                     setDeselectedFipTypes(() =>
                       Object.fromEntries(allFipTypes.map((key) => [key, !value])),
                     )
@@ -444,10 +460,12 @@ const FipTracker = () => {
                     color={"blue"}
                     checked={deselectedFipTypes[fipType] !== true}
                     setChecked={(value) => {
+                      setScrollCursor(0)
                       setDeselectedFipTypes((prev) => ({ ...prev, [fipType]: !value }))
                     }}
                     showOnly={true}
                     selectOnly={() => {
+                      setScrollCursor(0)
                       setDeselectedFipTypes(() =>
                         Object.fromEntries(allFipTypes.map((key) => [key, key !== fipType])),
                       )
@@ -531,6 +549,7 @@ const FipTracker = () => {
           />
         ))}
       </Flex>
+      <Box top="-20px"><IsVisibleObserver callback={() => setScrollCursor((oldValue) => oldValue + scrollPageSize)}/></Box>
     </Flex>
   )
 }

@@ -22,6 +22,7 @@ import { useAppSelector } from "../../../hooks"
 import { MIN_SEED_RESPONSES } from "../../../util/misc"
 import { CreateConversationModal } from "../../CreateConversationModal"
 import { useDiscussionPollDisplayOptions } from "./useDiscussionPollDisplayOptions"
+import { IsVisibleObserver } from "../../../components/IsVisibleObserver"
 
 const conversationStatusOptions = {
   open: { label: "Open", color: "blue" },
@@ -53,6 +54,12 @@ export default ({ only }: { only: string }) => {
   const [searchParams, setSearchParams] = useSearchParams()
 
   const searchParam = searchParams.get("search") || ""
+
+  // We want to display the polls as an "infinite scrolling list"
+  // The `scrollCursor` is the number of entries we want to display at a time
+  // When the user scrolls to the bottom of the list, this cursor is incremented to add more items
+  const [scrollCursor, setScrollCursor] = useState(0)
+  const scrollPageSize = 10
 
   const { data } = useSWR(
     `conversations_summary_discussion_polls_${only}`,
@@ -115,6 +122,8 @@ export default ({ only }: { only: string }) => {
       return true
     })
     .toSorted(sortFunction)
+    .slice(0, scrollCursor + scrollPageSize)
+
 
   return (
     <Box>
@@ -138,6 +147,7 @@ export default ({ only }: { only: string }) => {
           flexDirection: "column",
           gap: [3],
         }}
+        id="scrollableDiv"
       >
         <Text sx={{ fontWeight: 600, fontSize: [2] }}>
           {only === "polls" ? <>Discussion Polling</> : <>Sentiment Checks</>}
@@ -147,7 +157,10 @@ export default ({ only }: { only: string }) => {
             <TextField.Root
               placeholder="Search..."
               value={(searchParams as any).get("search") || ""}
-              onChange={(e) => setSearchParams({ search: e.target.value })}
+              onChange={(e) => {
+                setScrollCursor(0)
+                setSearchParams({ search: e.target.value })
+              }}
             >
               <TextField.Slot>
                 <TbSearch style={{ color: "#B4B6C2" }} />
@@ -175,6 +188,7 @@ export default ({ only }: { only: string }) => {
                   (value) => value === true,
                 )}
                 setChecked={(value) => {
+                  setScrollCursor(0)
                   setSelectedConversationStatuses(() =>
                     Object.fromEntries(allStatuses.map((key) => [key, value])),
                   )
@@ -189,6 +203,7 @@ export default ({ only }: { only: string }) => {
                   color={conversationStatusOptions[status].color}
                   checked={selectedConversationStatuses[status]}
                   setChecked={(value) => {
+                    setScrollCursor(0)
                     setSelectedConversationStatuses((prev) => ({ ...prev, [status]: value }))
                   }}
                 >
@@ -210,7 +225,10 @@ export default ({ only }: { only: string }) => {
                 <Select.Root
                   defaultValue={sortBy || "desc"}
                   value={sortBy}
-                  onValueChange={(v) => setSortBy(v as "asc" | "desc")}
+                  onValueChange={(v) => {
+                    setSortBy(v as "asc" | "desc")
+                    setScrollCursor(0)
+                  }}
                 >
                   <Select.Trigger />
                   <Select.Content>
@@ -249,6 +267,7 @@ export default ({ only }: { only: string }) => {
             <Text color="gray">None matching filters</Text>
           )}
         </Flex>
+        <Box top="-20px"><IsVisibleObserver callback={() => setScrollCursor((oldValue) => oldValue + scrollPageSize)}/></Box>
       </Flex>
       <CreateConversationModal
         isOpen={createConversationModalIsOpen}
